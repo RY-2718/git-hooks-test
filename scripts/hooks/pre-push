@@ -8,10 +8,13 @@ url="$2"
 
 echo "🏷️  Pre-push hook started"
 
+found_release_tag=false
+
 while read local_ref local_oid remote_ref remote_oid
 do
     # 正式なセマンティックバージョニングのタグのみチェック（beta/rcは除外）
     if echo "$local_ref" | grep -q "refs/tags/v[0-9]\+\.[0-9]\+\.[0-9]\+$"; then
+        found_release_tag=true
         tag_name=$(echo "$local_ref" | sed 's|refs/tags/||')
         echo "🏷️  Release tag detected: $tag_name"
 
@@ -21,6 +24,7 @@ do
             echo "   Please commit your CHANGELOG.md changes before releasing $tag_name"
             echo ""
             echo "💡 Tip: Run 'git add CHANGELOG.md && git commit -m \"Update CHANGELOG for $tag_name\"'"
+            echo ""
             exit 1
         fi
 
@@ -30,11 +34,12 @@ do
             echo "   Please commit your staged CHANGELOG.md changes before releasing $tag_name"
             echo ""
             echo "💡 Tip: Run 'git commit -m \"Update CHANGELOG for $tag_name\"'"
+            echo ""
             exit 1
         fi
 
-        # [Unreleased]セクションが存在しないかチェック
-        if grep -q "^## \[Unreleased\]" CHANGELOG.md 2>/dev/null; then
+        # [Unreleased]セクションが存在しないかチェック（大文字小文字を区別しない）
+        if grep -iq "^## \[unreleased\]" CHANGELOG.md 2>/dev/null; then
             echo "❌ Error: [Unreleased] section still exists in CHANGELOG.md!"
             echo "   Please update CHANGELOG.md before releasing $tag_name"
             echo ""
@@ -48,6 +53,7 @@ do
             echo "   ## [$tag_name] - $(date +%Y-%m-%d)"
             echo "   - Feature A"
             echo "   - Bug fix B"
+            echo ""
             exit 1
         fi
 
@@ -55,6 +61,7 @@ do
         if ! grep -q "^## \[$tag_name\]" CHANGELOG.md 2>/dev/null; then
             echo "⚠️  Warning: [$tag_name] section not found in CHANGELOG.md"
             echo "   Consider adding a section for this release"
+            echo ""
             exit 1
         fi
 
@@ -62,4 +69,9 @@ do
     fi
 done
 
+if [ "$found_release_tag" = false ]; then
+    echo "ℹ️  No release tags found - skipping CHANGELOG validation"
+fi
+
+echo ""
 exit 0

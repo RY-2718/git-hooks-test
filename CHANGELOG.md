@@ -4,6 +4,10 @@
 
 基本的なフォーマットは [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) に基づいています。
 
+## [Unreleased]
+
+* pre-push hook に細かい調整を加えました
+
 ## [v0.1.0]
 
 * pre-push hook で Changelog に Unreleased セクションが含まれている場合の push を禁止
