@@ -1,0 +1,52 @@
+#!/bin/sh
+
+# リリースタグのpush時にCHANGELOG.mdに[Unreleased]セクションが残っていないかチェックします
+
+remote="$1"
+url="$2"
+
+echo "🏷️  Pre-push hook started"
+
+while read local_ref local_oid remote_ref remote_oid
+do
+    # タグのpushかチェック (v[数字]で始まるタグ)
+    if echo "$local_ref" | grep -q "refs/tags/v[0-9]"; then
+        tag_name=$(echo "$local_ref" | sed 's|refs/tags/||')
+        echo "🏷️  Release tag detected: $tag_name"
+
+        # CHANGELOG.mdの存在チェック
+        if [ ! -f "CHANGELOG.md" ]; then
+            echo "❌ Error: CHANGELOG.md not found!"
+            exit 1
+        fi
+
+        # [Unreleased]セクションが存在しないかチェック
+        if grep -q "^## \[Unreleased\]" CHANGELOG.md; then
+            echo "❌ Error: [Unreleased] section still exists in CHANGELOG.md!"
+            echo "   Please update CHANGELOG.md before releasing $tag_name"
+            echo ""
+            echo "💡 Tip: Move content from [Unreleased] to [$tag_name] section"
+            echo "   Example:"
+            echo "   ## [Unreleased]"
+            echo "   - Feature A"
+            echo "   - Bug fix B"
+            echo ""
+            echo "   Change to:"
+            echo "   ## [$tag_name] - $(date +%Y-%m-%d)"
+            echo "   - Feature A"
+            echo "   - Bug fix B"
+            exit 1
+        fi
+
+        # タグ名に対応するセクションが存在するかチェック
+        if ! grep -q "^## \[$tag_name\]" CHANGELOG.md; then
+            echo "⚠️  Warning: [$tag_name] section not found in CHANGELOG.md"
+            echo "   Consider adding a section for this release"
+            exit 1
+        fi
+
+        echo "✅ CHANGELOG.md validation passed for $tag_name"
+    fi
+done
+
+exit 0
